@@ -17,6 +17,10 @@ export default () => ({
   services: {
     baseUrl: process.env.SERVICES_BASE_URL ?? 'http://localhost:3001',
   },
+  aiOrchestrator: {
+    baseUrl: process.env.AI_ORCHESTRATOR_BASE_URL,
+    apiKey: process.env.AI_ORCHESTRATOR_API_KEY,
+  },
   swagger: {
     enabled: process.env.SWAGGER_ENABLED === 'true',
   },

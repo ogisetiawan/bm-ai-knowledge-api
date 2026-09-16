@@ -22,8 +22,8 @@ async function bootstrap(): Promise<void> {
     nodeEnv !== 'production' || config.get<boolean>('swagger.enabled') === true;
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('BM Starterkit API Gateway')
-      .setDescription('BFF endpoints forwarded to internal API services')
+      .setTitle('Knowledge Base API Gateway')
+      .setDescription('API Gateway for Knowledge Base')
       .setVersion('1.0')
       .addBearerAuth(
         {

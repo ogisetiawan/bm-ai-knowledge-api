@@ -11,6 +11,8 @@ export const validationSchema = Joi.object({
   CORE_BASE_URL: Joi.string().uri({ scheme: ['http', 'https'] }).required(),
   CORE_APP_CODE: Joi.string().min(1).required(),
   SERVICES_BASE_URL: Joi.string().uri().default('http://localhost:3001'),
+  AI_ORCHESTRATOR_BASE_URL: Joi.string().uri({ scheme: ['http', 'https'] }).required(),
+  AI_ORCHESTRATOR_API_KEY: Joi.string().min(8).required(),
   SWAGGER_ENABLED: Joi.boolean().default(false),
   GATEWAY_API_KEY: Joi.string().min(32).required(),
   // Required from STEP 4 (internal JWT); optional until then.

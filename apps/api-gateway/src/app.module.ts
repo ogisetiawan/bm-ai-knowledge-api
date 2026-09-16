@@ -7,7 +7,9 @@ import configuration from './config/configuration';
 import { validationSchema } from './config/validation.schema';
 import { ContextInjectionInterceptor } from './interceptors/context-injection.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
-import { ActivityModule } from './modules/proxy/api-services/master-data/activity/activity.module';
+// import { ActivityModule } from './modules/proxy/api-services/master-data/activity/activity.module';
+import { ChatMessagesModule } from './modules/proxy/ai-orchestrator/chat-messages/chat-messages.module';
+import { ConversationsModule } from './modules/proxy/ai-orchestrator/conversations/conversations.module';
 
 @Module({
   imports: [
@@ -20,7 +22,9 @@ import { ActivityModule } from './modules/proxy/api-services/master-data/activit
     }),
     InternalJwtModule,
     AuthModule,
-    ActivityModule,
+    // ActivityModule,
+    ChatMessagesModule,
+    ConversationsModule,
   ],
   providers: [
     {
