@@ -41,11 +41,11 @@ export class MenuPermissionsService {
         }),
       );
 
-      if (this.isDev) {
-        this.logger.debug(
-          `Core menupermissions raw response: ${JSON.stringify(data)}`,
-        );
-      }
+      // if (this.isDev) {
+      //   this.logger.debug(
+      //     `Core menupermissions raw response: ${JSON.stringify(data)}`,
+      //   );
+      // }
 
       const menus = this.normalize(data);
       if (this.isDev) {

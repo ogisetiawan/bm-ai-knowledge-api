@@ -1,5 +1,6 @@
 // FILE: apps/api-gateway/src/modules/auth/profile.service.ts
 import {
+  BadGatewayException,
   HttpException,
   Injectable,
   Logger,
@@ -10,6 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
+import {
+  unwrapCoreProfile,
+  UserData,
+} from './interfaces/core-profile.interface';
 
 const CORE_TIMEOUT_MS = 5000;
 
@@ -32,7 +37,7 @@ export class ProfileService {
   }
 
   /** GET {CORE_BASE_URL}/auth/profile with the user's Bearer token. */
-  async getProfile(userJwt: string): Promise<unknown> {
+  async getProfile(userJwt: string): Promise<UserData> {
     try {
       const { data } = await firstValueFrom(
         this.http.get<unknown>(`${this.baseUrl}/auth/profile`, {
@@ -43,10 +48,18 @@ export class ProfileService {
 
       // Dev-only shape confirmation (§7.3: no PII in logs — keys only).
       if (this.isDev) {
-        this.logger.debug(`Core profile raw response keys: ${this.topLevelKeys(data)}`);
+        this.logger.debug(
+          `Core profile raw response keys: ${this.topLevelKeys(data)}`,
+        );
       }
 
-      return data;
+      const user = unwrapCoreProfile(data);
+      if (!user) {
+        throw new BadGatewayException(
+          'Core profile response is missing user data',
+        );
+      }
+      return user;
     } catch (error) {
       throw this.toHttpException(error);
     }
@@ -59,11 +72,17 @@ export class ProfileService {
   }
 
   private toHttpException(error: unknown): HttpException {
+    if (error instanceof HttpException) {
+      return error;
+    }
     if (error instanceof AxiosError && error.response) {
       if (error.response.status === 401) {
         return new UnauthorizedException('Core rejected the bearer token');
       }
-      return new HttpException('Core profile request failed', error.response.status);
+      return new HttpException(
+        'Core profile request failed',
+        error.response.status,
+      );
     }
     return new ServiceUnavailableException('Core service is unavailable');
   }
