@@ -186,12 +186,9 @@ Client → Gateway route (@MenuKey + @RequirePermission)
   "data": {
     "records": [
       {
-        "menu_key": "<ai-chat-menu-key>",
+        "menu_key": "chat",
         "permissions": [
-          "show-list-data",
-          "show-detail-data",
-          "create-data",
-          "update-data"
+          "show-list-data"
         ]
       }
     ],
@@ -206,10 +203,10 @@ Gateway menormalisasi `data.records[]` menjadi `{ menu_key, permissions[] }`.
 
 | Decorator | Contoh | Fungsi |
 |-----------|--------|--------|
-| `@MenuKey(...)` | `@MenuKey('<ai-chat-menu-key>')` | Menu yang dicek di Core |
-| `@RequirePermission(...)` | `@RequirePermission('show-detail-data')` | Permission wajib per endpoint |
+| `@MenuKey(...)` | `@MenuKey('chat')` (`AI_CHAT_MENU_KEY`) | Menu yang dicek di Core |
+| `@RequirePermission(...)` | `@RequirePermission('show-list-data')` | Permission wajib per endpoint |
 
-`menu_key` dan permission AI Chat mengikuti definisi menu di Core, bukan master-data activity starterkit.
+Core BM AI One saat ini hanya mengekspos `show-list-data` untuk `menu_key=chat`. Semua route chat-messages & conversations memakai permission itu. Menu lain: `dashboard`, `knowledge` (belum di-wire di gateway).
 
 ### File terkait
 
