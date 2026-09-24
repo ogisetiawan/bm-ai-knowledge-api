@@ -41,20 +41,25 @@ export class MenuPermissionsService {
         }),
       );
 
-      // if (this.isDev) {
-      //   this.logger.debug(
-      //     `Core menupermissions raw response: ${JSON.stringify(data)}`,
-      //   );
-      // }
+      if (this.isDev) {
+        this.logger.log(
+          `Core menupermissions raw response: ${JSON.stringify(data)}`,
+        );
+      }
 
       const menus = this.normalize(data);
       if (this.isDev) {
-        this.logger.debug(
+        this.logger.log(
           `Core menupermissions menus: ${menus.map((m) => m.menu_key).join(', ') || '(empty)'}`,
         );
       }
       return menus;
     } catch (error) {
+      if (this.isDev) {
+        this.logger.warn(
+          `Core menupermissions request failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
       throw this.toHttpException(error);
     }
   }

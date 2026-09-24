@@ -11,8 +11,10 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { MenuKey } from '../../../auth/decorators/menu-key.decorator';
 import { RequirePermission } from '../../../auth/decorators/require-permission.decorator';
 import { CoreBearerGuard } from '../../../auth/guards/core-bearer.guard';
+import { AI_CHAT_MENU_KEY } from '../ai-orchestrator.constants';
 import { ConversationsService } from './conversations.service';
 import { ConversationHistoryResponseDto } from './dto/conversation-history.response';
 import {
@@ -29,11 +31,15 @@ import { ConversationListMapper } from './mappers/conversation-list.mapper';
  * Proxies conversation routes to bm-ai-orchestrator.
  * Client sends a Core Bearer token. Gateway calls the orchestrator with
  * `AI_ORCHESTRATOR_API_KEY` and scopes `user` from Core profile `userId`.
+ *
+ * Guard order: CoreBearerGuard (controller) → MenuPermissionGuard (APP_GUARD).
+ * Core menu: `chat` / permission: `show-list-data` (only permission exposed by Core today).
  */
 @ApiTags('Conversations')
 @ApiBearerAuth('bearer')
 @ApiUnauthorizedResponse({ description: 'Missing or invalid Core bearer token' })
 @ApiForbiddenResponse({ description: 'Missing menu permission' })
+@MenuKey(AI_CHAT_MENU_KEY)
 @Controller()
 @UseGuards(CoreBearerGuard)
 export class ConversationsController {
@@ -56,7 +62,7 @@ export class ConversationsController {
   }
 
   @Get('conversations-history')
-  @RequirePermission('show-detail-data')
+  @RequirePermission('show-list-data')
   @ApiOperation({
     summary: 'List conversation message history',
     description:
@@ -73,7 +79,7 @@ export class ConversationsController {
 
   @Post('conversations/:conversation_id/name')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('update-data')
+  @RequirePermission('show-list-data')
   @ApiOperation({
     summary: 'Rename a conversation',
     description:
@@ -95,7 +101,7 @@ export class ConversationsController {
 
   @Delete('conversations/:conversation_id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission('update-data')
+  @RequirePermission('show-list-data')
   @ApiOperation({
     summary: 'Delete a conversation',
     description:

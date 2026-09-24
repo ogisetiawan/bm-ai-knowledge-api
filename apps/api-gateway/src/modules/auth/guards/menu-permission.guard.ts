@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -19,9 +20,14 @@ import { MenuPermissionsService } from '../menu-permissions.service';
  * Metadata:
  * - `@MenuKey('activity')`
  * - `@RequirePermission('show-detail-data')`
+ *
+ * Registered as `APP_GUARD` so it always runs. Routes without
+ * `@RequirePermission` are skipped.
  */
 @Injectable()
 export class MenuPermissionGuard implements CanActivate {
+  private readonly logger = new Logger(MenuPermissionGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly menuPermissions: MenuPermissionsService,
@@ -46,6 +52,10 @@ export class MenuPermissionGuard implements CanActivate {
     }
 
     const req = context.switchToHttp().getRequest<Request>();
+    this.logger.log(
+      `Checking menu="${menuKey}" permission="${permission}" path=${req.method} ${req.path}`,
+    );
+
     const token = this.extractBearer(req.headers.authorization);
     const permissions = await this.menuPermissions.getPermissionsForMenu(
       token,
