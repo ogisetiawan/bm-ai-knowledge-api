@@ -1,5 +1,5 @@
 // FILE: apps/api-gateway/src/main.ts
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -17,13 +17,17 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'api/docs*', method: RequestMethod.ALL }],
+  });
+
   const nodeEnv = config.getOrThrow<string>('nodeEnv');
   const swaggerEnabled =
     nodeEnv !== 'production' || config.get<boolean>('swagger.enabled') === true;
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Knowledge Base API Gateway')
-      .setDescription('API Gateway for Knowledge Base')
+      .setTitle('BM Knowledge Assistant - API Gateway')
+      .setDescription('API Gateway for BM Knowledge Assistant ( BM Orchestrator & BM Web Core )')
       .setVersion('1.0')
       .addBearerAuth(
         {
@@ -34,11 +38,13 @@ async function bootstrap(): Promise<void> {
         },
         'bearer',
       )
-      .addServer('', 'Local')
-      .addServer('/gateway', 'Public')
+      .addServer('/api/v1')
+      .addServer('/api/v2')
       .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api-docs', app, document, {
+    const document = SwaggerModule.createDocument(app, swaggerConfig, {
+      ignoreGlobalPrefix: true,
+    });
+    SwaggerModule.setup('api/docs', app, document, {
       swaggerOptions: {
         persistAuthorization: true,
         displayRequestDuration: true,
@@ -48,7 +54,7 @@ async function bootstrap(): Promise<void> {
 
   const port = config.getOrThrow<number>('gateway.port');
   await app.listen(port);
-  console.log(`Docs: http://localhost:${port}/api-docs`);
+  console.log(`Docs: http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();
