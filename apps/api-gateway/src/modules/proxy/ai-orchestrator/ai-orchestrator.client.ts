@@ -28,7 +28,7 @@ import {
 } from './conversations/interfaces/orchestrator-conversation.interface';
 
 /**
- * HTTP client for bm-ai-orchestrator (`https://ai.behnmeyer.com/v1`).
+ * HTTP client for bm-ai-orchestrator (`AI_ORCHESTRATOR_BASE_URL`).
  * Auth to the orchestrator is the server-side app API key — never the Core user JWT.
  */
 @Injectable()

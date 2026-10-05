@@ -241,8 +241,10 @@ Then configure the required environment variables.
 
 | Variable                   | Used By            | Description                                |
 | -------------------------- | ------------------ | ------------------------------------------ |
-| `CORE_BASE_URL`            | Gateway            | Base URL for Core API                      |
+| `CORE_BASE_URL`            | Gateway            | Base URL for Core API (set in `.env`)      |
 | `CORE_APP_CODE`            | Gateway            | Application code injected during login     |
+| `AI_ORCHESTRATOR_BASE_URL` | Gateway            | Base URL for the AI Orchestrator           |
+| `AI_ORCHESTRATOR_API_KEY`  | Gateway            | Server API key for the AI Orchestrator     |
 | `GATEWAY_API_KEY`          | Gateway + Services | Shared `x-api-key` secret                  |
 | `INTERNAL_JWT_PRIVATE_KEY` | Gateway            | RSA private key used to sign internal JWT  |
 | `INTERNAL_JWT_PUBLIC_KEY`  | Services           | RSA public key used to verify internal JWT |
@@ -252,8 +254,10 @@ Then configure the required environment variables.
 ### Example
 
 ```env
-CORE_BASE_URL=http://localhost:xxxx
+CORE_BASE_URL=https://YOUR_CORE_HOST/api
 CORE_APP_CODE=YOUR_APP_CODE
+AI_ORCHESTRATOR_BASE_URL=https://YOUR_AI_ORCHESTRATOR_HOST/v1
+AI_ORCHESTRATOR_API_KEY=YOUR_ORCHESTRATOR_API_KEY
 
 GATEWAY_API_KEY=YOUR_64_CHARACTER_SECRET
 

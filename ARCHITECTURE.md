@@ -6,7 +6,7 @@ It is **not** a monorepo of gateway + internal Nest services. It does **not** ho
 
 ```
 WEB Core — Auth / Login / Menu Permissions
-https://core.behnmeyer.com/bmd/api
+CORE_BASE_URL
    │  HTTP + Bearer token
    ▼
 [api-gateway]  ← this repository
@@ -23,7 +23,7 @@ https://core.behnmeyer.com/bmd/api
    │  HTTP
    ▼
 bm-ai-orchestrator — AI Chat
-https://ai.behnmeyer.com/v1/
+AI_ORCHESTRATOR_BASE_URL
 ```
 
 ## Purpose & boundaries
@@ -35,7 +35,7 @@ https://ai.behnmeyer.com/v1/
 | Core auth + menu RBAC | Master data / activity CRUD as a product of this repo |
 | Swagger, health, security middleware | NestJS internal microservices in this repo |
 
-Client **tidak** memanggil `https://ai.behnmeyer.com/v1/` langsung untuk traffic yang melewati gateway. Semua request lewat **api-gateway**. Core adalah sumber autentikasi dan permission.
+Client **tidak** memanggil `AI_ORCHESTRATOR_BASE_URL` langsung untuk traffic yang melewati gateway. Semua request lewat **api-gateway**. Core adalah sumber autentikasi dan permission.
 
 # FOLDER STRUCTURE
 
@@ -100,7 +100,7 @@ Do not add `apps/api-services`, `prisma/`, or `libs/database` as part of this ar
 
 ```
 Client              api-gateway (:3000)           Core API                         AI Orchestrator
-                    this repo                     core.behnmeyer.com/bmd/api       ai.behnmeyer.com/v1
+                    this repo                     CORE_BASE_URL                AI_ORCHESTRATOR_BASE_URL
   |                       |                            |                                |
   |  (login di WEB Core; token Core)                   |                                |
   |                       |                            |                                |
@@ -120,12 +120,12 @@ Client              api-gateway (:3000)           Core API                      
 
 ## FLOW API
 
-1. **Login Core** — User login di WEB Core (`https://core.behnmeyer.com/bmd/api`). Gateway **bukan** identity provider. Token yang dipakai client adalah access token Core.
+1. **Login Core** — User login di WEB Core (`CORE_BASE_URL`). Gateway **bukan** identity provider. Token yang dipakai client adalah access token Core.
 2. **Request AI Chat** — Client kirim `Authorization: Bearer <accessToken>` ke gateway (route proxy AI, bukan ke orchestrator langsung).
 3. **Validasi ke Core** — Gateway **tidak** memverifikasi signature JWT sendiri. Token diteruskan ke Core `GET /auth/profile`. Jika Core 401 → request ditolak.
 4. **RBAC menu** — `MenuPermissionGuard` memanggil Core `GET /auth/menupermissions`, cocokkan `menu_key` + permission. 403 jika tidak ada.
 5. **Bangun AuthContext** — Profile Core di-map ke `{ userId, appCode, roles, employee, raw }`.
-6. **Proxy** — Gateway forward ke `AI_ORCHESTRATOR_BASE_URL` (`https://ai.behnmeyer.com/v1/`). Path, method, query, dan body mengikuti kontrak AI Chat orchestrator.
+6. **Proxy** — Gateway forward ke `AI_ORCHESTRATOR_BASE_URL`. Path, method, query, dan body mengikuti kontrak AI Chat orchestrator.
 7. **Tidak ada api-services** — Tidak ada hop ke Nest service di repo ini, tidak ada Prisma, tidak ada `ApiKeyGuard` / `InternalAuthGuard` in-repo.
 
 ## Header contract
@@ -147,15 +147,15 @@ curl -s http://localhost:3000/<ai-chat-path> \
   -H "Authorization: Bearer <accessToken>"
 ```
 
-Di Swagger: Authorize → paste **hanya** `accessToken` (tanpa kata `Bearer`). Token harus diterbitkan oleh Core yang sama dengan `CORE_BASE_URL` (`https://core.behnmeyer.com/bmd/api`).
+Di Swagger: Authorize → paste **hanya** `accessToken` (tanpa kata `Bearer`). Token harus diterbitkan oleh Core yang sama dengan `CORE_BASE_URL`.
 
 ## Env (gateway)
 
 | Variable | Description |
 |----------|-------------|
-| `CORE_BASE_URL` | Core API, prod: `https://core.behnmeyer.com/bmd/api` |
-| `CORE_APP_CODE` | Application code untuk konteks Core |
-| `AI_ORCHESTRATOR_BASE_URL` | AI Chat API, prod: `https://ai.behnmeyer.com/v1` |
+| `CORE_BASE_URL` | Core API. Nilai ada di `.env`, bukan di repo. |
+| `CORE_APP_CODE` | Application code untuk konteks Core. Nilai ada di `.env`. |
+| `AI_ORCHESTRATOR_BASE_URL` | AI Chat API. Nilai ada di `.env`, bukan di repo. |
 | `GATEWAY_PORT` | Listen port gateway (default `3000`) |
 | `SWAGGER_ENABLED` | Swagger di luar development |
 
@@ -174,7 +174,7 @@ Client → Gateway route (@MenuKey + @RequirePermission)
             → GET {CORE_BASE_URL}/auth/menupermissions
             → cari menu_key → cek permission
             → 403 jika tidak ada
-       → ContextInjectionInterceptor → Proxy → https://ai.behnmeyer.com/v1/
+       → ContextInjectionInterceptor → Proxy → AI_ORCHESTRATOR_BASE_URL
 ```
 
 ### Response Core (envelope)

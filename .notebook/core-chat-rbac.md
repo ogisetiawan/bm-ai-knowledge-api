@@ -2,7 +2,7 @@
 
 ## Confirmed from Core API samples
 
-- Menus (`api-getmenus.md`): `dashboard`, `chat`, `knowledge` (app `bmai`)
+- Menus (`api-getmenus.md`): `dashboard`, `chat`, `knowledge` (app `CORE_APP_CODE`)
 - Permissions (`api-getmenupermission.md`): each menu only has `show-list-data`
 
 ## Gateway wiring

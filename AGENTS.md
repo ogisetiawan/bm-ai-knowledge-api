@@ -6,8 +6,8 @@ This repository is a **NestJS API Gateway only**. It sits between:
 
 | System | URL | Role |
 |--------|-----|------|
-| Core Platform (WEB Core) | `https://core.behnmeyer.com/bmd/api` | Auth, login, profile, menu permissions |
-| bm-ai-orchestrator (AI Chat) | `https://ai.behnmeyer.com/v1/` | Downstream AI Chat API |
+| Core Platform (WEB Core) | `CORE_BASE_URL` | Auth, login, profile, menu permissions |
+| bm-ai-orchestrator (AI Chat) | `AI_ORCHESTRATOR_BASE_URL` | Downstream AI Chat API |
 
 Clients never call the AI Orchestrator directly. They send Core Bearer tokens to this gateway; the gateway authenticates against Core, enforces menu RBAC, then proxies AI Chat traffic to the orchestrator.
 
@@ -16,7 +16,7 @@ Clients never call the AI Orchestrator directly. They send Core Bearer tokens to
 - Single app: `apps/api-gateway`
 - Auth against Core (`/auth/profile`, `/auth/menupermissions`; login only if Core is the login source)
 - RBAC via Core menu permissions (`@MenuKey` + `@RequirePermission`)
-- HTTP proxy / BFF routes to `https://ai.behnmeyer.com/v1/`
+- HTTP proxy / BFF routes to `AI_ORCHESTRATOR_BASE_URL`
 - Shared libs used by the gateway: `libs/common`, `libs/auth` (AuthContext)
 - Swagger at `/api-docs` (gateway only)
 - Helmet, CORS, throttling, RFC 7807 errors, Joi env validation
@@ -50,8 +50,8 @@ bm-ai-orchestrator, not here.
 - Env vars: UPPER_SNAKE_CASE
 - Every guard/interceptor MUST have `.spec.ts` (happy + sad path)
 - Service method returns domain-shaped object, controller maps to DTO
-- Downstream base URL: `AI_ORCHESTRATOR_BASE_URL` (prod: `https://ai.behnmeyer.com/v1`)
-- Core base URL: `CORE_BASE_URL` (prod: `https://core.behnmeyer.com/bmd/api`)
+- Downstream base URL: `AI_ORCHESTRATOR_BASE_URL` (from `.env`, never a literal host in this repo)
+- Core base URL: `CORE_BASE_URL` (from `.env`, never a literal host in this repo)
 
 ## SECURITY BASELINE
 - User token: Core-issued Bearer. Gateway does **not** verify JWT signature locally.
