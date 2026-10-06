@@ -4,15 +4,17 @@ import {
   Injectable,
   Logger,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosRequestConfig } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { LoginDto } from './dto/login.dto';
 import { CoreLoginResponse } from './interfaces/core-login.interface';
 
 const CORE_TIMEOUT_MS = 5000;
+const CORE_RETRY_ATTEMPTS = 3;
 
 /**
  * Thin HTTP client for the Core (WEB Core) API.
@@ -57,6 +59,73 @@ export class CoreClient {
     } catch (error) {
       throw this.toHttpException(error);
     }
+  }
+
+  /** GET {CORE_BASE_URL}/auth/menus — raw Core body. */
+  fetchMenus(userJwt: string): Promise<unknown> {
+    return this.fetchAuthorized('/auth/menus', userJwt);
+  }
+
+  /** GET {CORE_BASE_URL}/auth/menupermissions — raw Core body. */
+  fetchMenuPermissions(userJwt: string): Promise<unknown> {
+    return this.fetchAuthorized('/auth/menupermissions', userJwt);
+  }
+
+  private async fetchAuthorized(path: string, userJwt: string): Promise<unknown> {
+    try {
+      const data = await this.request({
+        method: 'GET',
+        url: `${this.baseUrl}${path}`,
+        headers: { Authorization: `Bearer ${userJwt}` },
+        timeout: CORE_TIMEOUT_MS,
+      });
+
+      if (this.isDev) {
+        this.logger.debug(`Core ${path} response keys: ${this.topLevelKeys(data)}`);
+      }
+
+      return data;
+    } catch (error) {
+      throw this.toResourceException(error);
+    }
+  }
+
+  /**
+   * Network failures retry up to 3 times. An HTTP response from Core is final.
+   */
+  private async request(config: AxiosRequestConfig): Promise<unknown> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= CORE_RETRY_ATTEMPTS; attempt++) {
+      try {
+        const response = await firstValueFrom(this.http.request<unknown>(config));
+        return response.data;
+      } catch (error) {
+        lastError = error;
+        if (error instanceof AxiosError && error.response) {
+          throw error;
+        }
+        if (attempt === CORE_RETRY_ATTEMPTS) {
+          break;
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  private topLevelKeys(data: unknown): string {
+    return typeof data === 'object' && data !== null
+      ? Object.keys(data).join(', ')
+      : typeof data;
+  }
+
+  private toResourceException(error: unknown): HttpException {
+    if (error instanceof AxiosError && error.response) {
+      if (error.response.status === 401) {
+        return new UnauthorizedException('Core rejected the bearer token');
+      }
+      return new HttpException('Core request failed', error.response.status);
+    }
+    return new ServiceUnavailableException('Core service is unavailable');
   }
 
   private toHttpException(error: unknown): HttpException {

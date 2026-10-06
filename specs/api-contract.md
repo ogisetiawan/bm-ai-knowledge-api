@@ -39,7 +39,7 @@ Rules for every request:
 
 ## 2. Authorization
 
-Every gateway route in this document requires Core menu `chat` and permission `show-list-data`. Core login does not.
+Chat routes in this document require Core menu `chat` and permission `show-list-data`. `GET /api/v1/sessions` requires a Core bearer token and does not check a menu permission. Core login does not use this gateway.
 
 | Condition | HTTP |
 |---|---|
@@ -84,8 +84,10 @@ Fixed `502` `message` values:
 | `AI Orchestrator returned an invalid chat message` |
 | `AI Orchestrator returned invalid suggested questions` |
 | `Core profile response is missing user data` |
+| `Core menus response is invalid` |
+| `Core menupermissions response is invalid` |
 
-If Core returns a status other than `401` while loading the profile, the gateway forwards that Core HTTP status with `message` `Core profile request failed`.
+If Core returns a status other than `401` while loading the profile, the gateway forwards that Core HTTP status with `message` `Core profile request failed`. The same rule applies to Core menus and menu permissions on `GET /api/v1/sessions`, with `message` `Core request failed`.
 
 Any other orchestrator status (for example `404`) is forwarded as-is, including the raw orchestrator body. That body is not wrapped in the envelope above. Orchestrator `401` and `403` are not forwarded; both become `502` with `AI Orchestrator rejected the API key`.
 
@@ -424,15 +426,62 @@ The gateway does not retry delete. A `503` after a timeout does not prove the co
 
 ---
 
+### 5.7 Load session
+
+`GET /api/v1/sessions`
+
+No query and no body. `Authorization: Bearer <core_access_token>` is required. This route does not check menu `chat`.
+
+The gateway calls Core in parallel:
+
+| Core | What the session keeps |
+|---|---|
+| `GET /auth/profile` | Four fields only. See the table below. |
+| `GET /auth/menus` | The Core `data` object only (`records` and `meta`). |
+| `GET /auth/menupermissions` | The Core `data` object only (`records` and `meta`). |
+
+Profile fields (`SessionMapper.toResponse()`):
+
+| Field | Type | Rule |
+|---|---|---|
+| `auth_user_applications` | string \| null | `application_code` of the first `auth_user_applications` entry. Later entries are dropped. |
+| `auth_user_roles` | string \| null | `role_name` of the first `auth_user_roles` entry. Later entries are dropped. |
+| `user_id` | string \| null | Core `user_id`. |
+| `employee` | object \| null | The Core `employee` object, unchanged. `null` when Core omits it. |
+
+```json
+{
+  "auth_user_applications": "core",
+  "auth_user_roles": "GHG Admin TH",
+  "user_id": "user-id",
+  "employee": { "id_employee": "1057", "full_name": "Example" },
+  "menus": {
+    "records": [],
+    "meta": { "page": 1, "limit": -1, "total": 0, "pageTotal": 1 }
+  },
+  "menupermissions": {
+    "records": [],
+    "meta": { "page": 1, "limit": -1, "total": 0, "pageTotal": 1 }
+  }
+}
+```
+
+`menus.records` is the Core menu tree (`children` nested). `menupermissions.records` is `{ menu_key, permissions[] }`. The gateway does not filter either list. `status` and `message` from those Core responses are not returned.
+
+Any one Core failure fails the whole call. `401` means the bearer token was missing or Core rejected it. A menus or menu-permissions body whose `data` is missing or not a JSON object is `502` with `Core menus response is invalid` or `Core menupermissions response is invalid`. Network failure after 3 attempts is `503` with `Core service is unavailable`. Profile network failure is also `503`; profile itself is not retried.
+
+---
+
 ## 6. Client flow
 
 1. `POST {CORE_BASE_URL}/auth/login` with `email`, `password`, and `app_code` set to `CORE_APP_CODE`. Store `access_token`.
-2. `GET /api/v1/conversations` for the sidebar, with `Authorization: Bearer <access_token>`. While `has_more` is `true`, request the next page with `last_id` set to the last item `id`.
-3. `GET /api/v1/conversations-history?conversation_id=` when a thread opens.
-4. `POST /api/v1/chat-messages`. New thread: omit `conversation_id`. Existing thread: send the stored `conversation_id`.
-5. Render `answer`. Persist `conversation_id` from the response.
-6. `GET /api/v1/chat-messages/{message_id}/suggested` for suggestion chips. A chip sends that string as `query` with the same `conversation_id`.
-7. `POST /api/v1/conversations/{conversation_id}/name` to rename. `DELETE /api/v1/conversations/{conversation_id}` to delete; on `204`, remove the item from the sidebar.
+2. `GET /api/v1/sessions` with `Authorization: Bearer <access_token>` for the signed-in user, menu tree, and menu permissions.
+3. `GET /api/v1/conversations` for the sidebar, with `Authorization: Bearer <access_token>`. While `has_more` is `true`, request the next page with `last_id` set to the last item `id`.
+4. `GET /api/v1/conversations-history?conversation_id=` when a thread opens.
+5. `POST /api/v1/chat-messages`. New thread: omit `conversation_id`. Existing thread: send the stored `conversation_id`.
+6. Render `answer`. Persist `conversation_id` from the response.
+7. `GET /api/v1/chat-messages/{message_id}/suggested` for suggestion chips. A chip sends that string as `query` with the same `conversation_id`.
+8. `POST /api/v1/conversations/{conversation_id}/name` to rename. `DELETE /api/v1/conversations/{conversation_id}` to delete; on `204`, remove the item from the sidebar.
 
 Client timeout for send-message: greater than 60 seconds. List, history, suggested questions, and rename: the gateway retries network failures up to 3 times, 5 seconds each.
 

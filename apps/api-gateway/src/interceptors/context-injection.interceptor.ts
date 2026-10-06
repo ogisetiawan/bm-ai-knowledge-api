@@ -16,6 +16,7 @@ import { AuthService } from '../modules/auth/auth.service';
 export type RequestWithAuth = Request & { auth?: AuthContext };
 
 const PROXY_PREFIXES = ['/api', '/activities'] as const;
+const SESSION_PATHS = ['/api/v1/sessions', '/sessions'] as const;
 
 /**
  * Global interceptor — active on proxied `/api/*` and `/activities/*` routes.
@@ -38,6 +39,12 @@ export class ContextInjectionInterceptor implements NestInterceptor {
   ): Promise<Observable<unknown>> {
     const req = context.switchToHttp().getRequest<RequestWithAuth>();
 
+    // Session reads Core itself. Skip the proxy header injection so this
+    // route does not call /auth/profile a second time.
+    if (this.isSessionRoute(req.path)) {
+      return next.handle();
+    }
+
     if (!PROXY_PREFIXES.some((prefix) => this.matchesPrefix(req.path, prefix))) {
       return next.handle();
     }
@@ -54,6 +61,10 @@ export class ContextInjectionInterceptor implements NestInterceptor {
     req.headers[HEADERS.REQUEST_ID] = randomUUID();
 
     return next.handle();
+  }
+
+  private isSessionRoute(path: string): boolean {
+    return (SESSION_PATHS as readonly string[]).includes(path);
   }
 
   private matchesPrefix(path: string, prefix: string): boolean {
