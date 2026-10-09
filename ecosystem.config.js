@@ -8,7 +8,7 @@
 module.exports = {
   apps: [
     {
-      name: "bm-ai-knowledge-api",
+      name: "8100-bm-ai-knowledge-api",
       cwd: __dirname,
       namespace: "bm-ai",
       script: "dist/apps/api-gateway/apps/api-gateway/src/main.js",
